@@ -1,0 +1,70 @@
+import gradio as gr
+from argon2 import PasswordHasher
+from argon2.exceptions import VerifyMismatchError
+
+ph = PasswordHasher()
+
+# Hash table (Dictionary)
+users = {}
+
+# Register function
+def register(username, password):
+    if not username or not password:
+        return "❌ Enter username and password."
+
+    if username in users:
+        return "❌ Username already exists."
+
+    if len(password) < 8:
+        return "❌ Password must be at least 8 characters."
+
+    users[username] = ph.hash(password)
+    return "✅ Registration Successful!"
+
+# Login function
+def login(username, password):
+    if username not in users:
+        return "❌ User not found."
+
+    try:
+        ph.verify(users[username], password)
+        return f"✅ Welcome, {username}!"
+    except VerifyMismatchError:
+        return "❌ Incorrect Password."
+
+# Show stored hashes
+def show_hashes():
+    if not users:
+        return "No users registered."
+
+    text = ""
+    for u, h in users.items():
+        text += f"Username: {u}\nHash: {h}\n\n"
+    return text
+
+# UI
+with gr.Blocks(title="Secure Password Manager", theme=gr.themes.Soft()) as demo:
+
+    gr.Markdown("# 🔐 Secure Password Manager Using Hashing")
+    gr.Markdown("Passwords are stored securely using **Argon2id**.")
+
+    with gr.Tab("Register"):
+        r_user = gr.Textbox(label="Username")
+        r_pass = gr.Textbox(label="Password", type="password")
+        r_btn = gr.Button("Register")
+        r_out = gr.Textbox(label="Status")
+        r_btn.click(register, [r_user, r_pass], r_out)
+
+    with gr.Tab("Login"):
+        l_user = gr.Textbox(label="Username")
+        l_pass = gr.Textbox(label="Password", type="password")
+        l_btn = gr.Button("Login")
+        l_out = gr.Textbox(label="Status")
+        l_btn.click(login, [l_user, l_pass], l_out)
+
+    with gr.Tab("Stored Hashes"):
+        h_btn = gr.Button("View Stored Hashes")
+        h_out = gr.Textbox(lines=10, label="Hash Table")
+        h_btn.click(show_hashes, outputs=h_out)
+
+demo.launch(share=True)
